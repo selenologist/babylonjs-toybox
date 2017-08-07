@@ -1,7 +1,7 @@
 {
   "name": "phaser-coffee-boilerplate",
   "dependencies": {
-    "phaser": "~2.0.4",
-    "jquery": "~2.1.1"
+    "phaser-ce": "~2.8.3",
+    "jquery": "~3.2.1"
   }
 }
