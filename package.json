@@ -1,5 +1,5 @@
 {
-  "name": "phaser-coffee-boilerplate",
+  "name": "babylonjs-coffee-boilerplate",
   "scripts": {
     "start": "npm install && bower install && grunt"
   },

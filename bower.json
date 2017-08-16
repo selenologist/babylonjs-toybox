@@ -1,7 +1,7 @@
 {
-  "name": "phaser-coffee-boilerplate",
+  "name": "babylonjs-coffee-boilerplate",
   "dependencies": {
-    "phaser-ce": "~2.8.3",
+    "babylonjs": "~3.0.7",
     "jquery": "~3.2.1"
   }
 }
