@@ -1,5 +1,5 @@
 {
-  "name": "babylonjs-coffee-boilerplate",
+  "name": "babylon-coffee-boilerplate",
   "scripts": {
     "start": "npm install && bower install && grunt"
   },

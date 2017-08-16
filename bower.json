@@ -1,5 +1,5 @@
 {
-  "name": "babylonjs-coffee-boilerplate",
+  "name": "babylon-coffee-boilerplate",
   "dependencies": {
     "babylonjs": "~3.0.7",
     "jquery": "~3.2.1"
