@@ -2,6 +2,7 @@
   "name": "babylon-coffee-boilerplate",
   "dependencies": {
     "babylonjs": "~3.0.7",
-    "jquery": "~3.2.1"
+    "jquery": "~3.2.1",
+    "cannon.js": "~0.6.2"
   }
 }
