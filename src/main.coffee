@@ -12,7 +12,7 @@ $(document).ready ->
     docbody = (document.getElementsByTagName 'body')[0]
     canvas = document.getElementById 'renderCanvas'
     engine = new BABYLON.Engine(canvas, true)
-  
+
     attracted_to_origin = []
     slowed_by_water     = []
     clickable           = []
@@ -65,7 +65,7 @@ $(document).ready ->
         scene.environmentTexture =
             new BABYLON.CubeTexture("/assets/vendor/babylonjs/assets/textures/skybox/TropicalSunnyDay", scene)
         skybox = scene.createDefaultSkybox(scene.environmentTexture, true, 512)
-        skybox.position.y = -50
+        skybox.position.y = -30
 
         light  = new BABYLON.SpotLight(
             'Sunlight',
@@ -78,24 +78,24 @@ $(document).ready ->
         flat_large_plane = BABYLON.Mesh.CreateGround('ground for raycasting', 1000, 1000, 2, scene)
         flat_large_plane.isVisible = false
         
-        cube = BABYLON.Mesh.CreateBox('cube1', 2, scene)
-        cube.position.x = -2
-        cube.position.y = 10
+        cube = BABYLON.Mesh.CreateBox 'cube1', 2, scene
+        cube.position = new BABYLON.Vector3 -2, 10, 0
+        
+        cube2 = BABYLON.Mesh.CreateBox 'cube2', 2, scene
+        cube2.position = new BABYLON.Vector3 2, 12, 0
+        
         cube.material = new BABYLON.StandardMaterial("cube material", scene)
         cube.material.specularPower = 8
         cube.material.diffuseColor = new BABYLON.Color3(0.9, 0.1, 0.1)
+        cube2.material = new BABYLON.StandardMaterial("cube2 material", scene)
+        cube2.material.specularPower = 4
+        cube2.material.diffuseColor = new BABYLON.Color3(0.1, 0.9, 0.1)
+        
         cube.physics =
             new BABYLON.PhysicsImpostor(cube,
                                         BABYLON.PhysicsImpostor.BoxImpostor,
                                         { mass: 1.0 },
                                         scene)
-
-        cube2 = BABYLON.Mesh.CreateBox('cube2', 2, scene)
-        cube2.position.x = 2
-        cube2.position.y = 12
-        cube2.material = new BABYLON.StandardMaterial("cube2 material", scene)
-        cube2.material.specularPower = 4
-        cube2.material.diffuseColor = new BABYLON.Color3(0.1, 0.9, 0.1)
         cube2.physics =
             new BABYLON.PhysicsImpostor(cube2,
                                         BABYLON.PhysicsImpostor.BoxImpostor,
@@ -133,7 +133,7 @@ $(document).ready ->
                                         { mass: 1.0 },
                                         scene)
         
-        shadowGenerator = new BABYLON.ShadowGenerator(4096, light)
+        shadowGenerator = new BABYLON.ShadowGenerator(1024, light)
         shadowGenerator.bias = 0.001
         shadowGenerator.usePoissonSampling = true
         shadowList = shadowGenerator.getShadowMap().renderList
@@ -149,7 +149,7 @@ $(document).ready ->
                         (Math.cos(x/128 * Math.PI + y/64 * Math.PI) + 1.0) * 7.0 +
                         (Math.cos(x/32 * Math.PI + Math.sin(y/32*Math.PI)) + 1.0) * 5.0
 
-        ground = BABYLON.Mesh.CreateGround('ground1', 256, 256, 256, scene, true) # lots of subdivisions for displacing, and IS updatable
+        ground = BABYLON.Mesh.CreateGround('ground1', 256, 256, 128, scene, true) # lots of subdivisions for displacing, and IS updatable
         ground.DisplacementMapFromFloatBuffer(groundmap, 256, 256, 1)
         groundmap = null
         shadowList.push(ground)
@@ -162,13 +162,14 @@ $(document).ready ->
         ground.material.diffuseTexture =
             new BABYLON.GrassProceduralTexture(
                 "grass texture",
-                2048,
+                256,
                 scene
             )
         ground.material.specularColor = new BABYLON.Color3(0,0,0) # no specular reflection
+        ((x) -> x.uScale = x.vScale = 10) ground.material.diffuseTexture
         ground.receiveShadows = true
 
-        water = BABYLON.Mesh.CreateGround("water", 256, 256, 32, scene) # less subdivs
+        water = BABYLON.Mesh.CreateGround("water", 256, 256, 16, scene) # less subdivs
         waterMat = new BABYLON.WaterMaterial("water_material", scene)
         waterMat.bumpTexture = new BABYLON.Texture("/assets/vendor/babylonjs/assets/textures/waterbump.png", scene)
         waterMat.backFaceCulling = true
@@ -185,6 +186,7 @@ $(document).ready ->
 
         waterParticles = new BABYLON.ParticleSystem(
             "water particles", 2000, scene)
+        waterParticles.updateSpeed *= 2
         waterParticles.particleTexture = new BABYLON.Texture("/assets/textures/watersplash.png", scene)
         waterParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD
         waterParticles.color1 = new BABYLON.Color4(0.8, 0.9, 1.0, 1.0)
@@ -225,6 +227,28 @@ $(document).ready ->
         newWall(   0.0,-128.0,   Math.PI  )
         newWall(-128.0,   0.0, 3*Math.PI/2)
         ###
+        
+        ##
+        # Optimisation
+
+        cube.material.freeze()
+        cube.convertToUnIndexedMesh()
+        cube2.material.freeze()
+        cube2.convertToUnIndexedMesh()
+        sphere.material.freeze()
+        ground.material.freeze()
+        ground.freezeWorldMatrix()
+        cylinder.material.freeze()
+        skybox.freezeWorldMatrix()
+        skybox.convertToUnIndexedMesh()
+        #skybox.material.freeze() - don't do this, bottom half of the box isn't rendered
+       
+        try_harder = false
+        try_harder and BABYLON.SceneOptimizer.OptimizeAsync(
+            scene,
+            BABYLON.SceneOptimizerOptions.LowDegradationAllowed(),
+            () -> console.log("optimisation success"),
+            () -> console.log("optimisation failure"))
 
         return scene
 
@@ -275,7 +299,7 @@ $(document).ready ->
     vmap = (vector, func) -> new BABYLON.Vector3(func(vector.x, 0), func(vector.y, 1), func(vector.z, 2))
     update = () ->
         for mesh in attracted_to_origin
-            origin = new BABYLON.Vector3(0,0,0)
+            origin = new BABYLON.Vector3(0,mesh.position.y,0)
             diff   = origin.subtract(mesh.position)
             diff   = vmap(diff, (a) ->
                 sign =
@@ -285,7 +309,7 @@ $(document).ready ->
                         -1
                     else
                         0
-                sign * Math.log10(a * a + 1.0) * 0.07)
+                sign * Math.log2(a * a + 1.0) * 0.07)
             mesh.physics.applyImpulse(diff, mesh.getAbsolutePosition())
         for mesh in shuffle(slowed_by_water) # shuffle to share the single particle emitter ;D
             minimum = mesh.getBoundingInfo().minimum
@@ -297,10 +321,12 @@ $(document).ready ->
                 # dampen velocity in water as a factor of depth
                 mesh.physics.setLinearVelocity(vmap(old, (a) -> a * factor))
                 
-                velocitySum = Math.log10(Math.abs(old.x) + Math.abs(old.y) + Math.abs(old.z) + 1.0)
-                if velocitySum < 0.1
+                velocitySum = Math.log(Math.abs(old.x) + Math.abs(old.y) + Math.abs(old.z) + 1.0)
+                if velocitySum < 1
                     velocitySum = 0
                 else
+                    waterParticles.minEmitPower = velocitySum / 8
+                    waterParticles.maxEmitPower = velocitySum * 4
                     waterParticles.emitter = mesh
                     waterParticles.manualEmitCount = 45*depth*velocitySum
                     waterParticles.start()
